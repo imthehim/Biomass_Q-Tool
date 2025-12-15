@@ -1856,12 +1856,12 @@ def main() -> None:
         st.session_state["user"] = None
         
     # DEV: force login (comment out later)
-    if "user" not in st.session_state or not st.session_state["user"]:
-        st.session_state["user"] = {"id": 1, "username": "dev"}
+    # if "user" not in st.session_state or not st.session_state["user"]:
+    #     st.session_state["user"] = {"id": 1, "username": "dev"}
 
-    # if not st.session_state["user"]:
-    #     login_screen()
-    #     return
+    if not st.session_state["user"]:
+        login_screen()
+        return
 
     page = sidebar_nav()
 
@@ -1903,3 +1903,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
