@@ -411,56 +411,85 @@ def get_farm(project_id: int) -> Optional[dict]:
 
     return dict(zip(fields, row))
 
-
-
 def upsert_farm(project_id: int, farm: dict) -> None:
     conn = get_conn()
     cur = conn.cursor()
+
+    # detect schema (so it's safe on older DBs)
+    cur.execute("PRAGMA table_info(farms)")
+    cols = {r[1] for r in cur.fetchall()}
+    has_fid = "farm_feature_id" in cols
+    has_geom = "farm_geom_geojson" in cols
+
     existing = get_farm(project_id)
+
     if existing is None:
-        cur.execute(
-            """
-            INSERT INTO farms(
-                project_id, farm_name_number, owner_name, title_deed_size_ha, avg_rainfall_mm,
-                soil_type, farm_workers_avg, latitude, longitude, created_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                project_id,
-                farm["farm_name_number"],
-                farm["owner_name"],
-                farm["title_deed_size_ha"],
-                farm["avg_rainfall_mm"],
-                farm["soil_type"],
-                farm["farm_workers_avg"],
-                farm["latitude"],
-                farm["longitude"],
-                str(date.today()),
-            ),
-        )
+        fields = [
+            "project_id", "farm_name_number", "owner_name", "title_deed_size_ha", "avg_rainfall_mm",
+            "soil_type", "farm_workers_avg", "latitude", "longitude"
+        ]
+        values = [
+            project_id,
+            farm["farm_name_number"],
+            farm["owner_name"],
+            farm["title_deed_size_ha"],
+            farm["avg_rainfall_mm"],
+            farm["soil_type"],
+            farm["farm_workers_avg"],
+            farm["latitude"],
+            farm["longitude"],
+        ]
+
+        if has_fid:
+            fields.append("farm_feature_id")
+            values.append(farm.get("farm_feature_id"))
+        if has_geom:
+            fields.append("farm_geom_geojson")
+            values.append(farm.get("farm_geom_geojson"))
+
+        fields.append("created_at")
+        values.append(str(date.today()))
+
+        sql = f"INSERT INTO farms({', '.join(fields)}) VALUES ({', '.join(['?'] * len(fields))})"
+        cur.execute(sql, values)
+
     else:
-        cur.execute(
-            """
-            UPDATE farms
-            SET farm_name_number=?, owner_name=?, title_deed_size_ha=?, avg_rainfall_mm=?,
-                soil_type=?, farm_workers_avg=?, latitude=?, longitude=?
-            WHERE project_id=?
-            """,
-            (
-                farm["farm_name_number"],
-                farm["owner_name"],
-                farm["title_deed_size_ha"],
-                farm["avg_rainfall_mm"],
-                farm["soil_type"],
-                farm["farm_workers_avg"],
-                farm["latitude"],
-                farm["longitude"],
-                project_id,
-            ),
-        )
+        set_fields = [
+            "farm_name_number=?",
+            "owner_name=?",
+            "title_deed_size_ha=?",
+            "avg_rainfall_mm=?",
+            "soil_type=?",
+            "farm_workers_avg=?",
+            "latitude=?",
+            "longitude=?",
+        ]
+        params = [
+            farm["farm_name_number"],
+            farm["owner_name"],
+            farm["title_deed_size_ha"],
+            farm["avg_rainfall_mm"],
+            farm["soil_type"],
+            farm["farm_workers_avg"],
+            farm["latitude"],
+            farm["longitude"],
+        ]
+
+        if has_fid:
+            set_fields.append("farm_feature_id=?")
+            params.append(farm.get("farm_feature_id"))
+        if has_geom:
+            set_fields.append("farm_geom_geojson=?")
+            params.append(farm.get("farm_geom_geojson"))
+
+        params.append(project_id)
+
+        sql = f"UPDATE farms SET {', '.join(set_fields)} WHERE project_id=?"
+        cur.execute(sql, params)
+
     conn.commit()
     conn.close()
+
 
 
 # -----------------------------
@@ -1238,7 +1267,7 @@ def projects_page(user_id: int) -> None:
 
 
 def farm_page() -> None:
-    page_header("Farm registration") #🏡
+    page_header("Farm registration")
     project_id = st.session_state.get("active_project_id")
     if not project_id:
         st.warning("Please select an active project first (Projects page).")
@@ -1248,80 +1277,41 @@ def farm_page() -> None:
 
     existing = get_farm(project_id) or {}
 
-    
-    c1, c2, c3 = st.columns(3)
+    # ---- safe defaults (prevents UnboundLocalError) ----
+    auto_name = ""
+    auto_owner = ""
+    auto_lat = None
+    auto_lon = None
+    auto_fid = ""
+    picked_geom = None
 
-    with c1:
-            farm_name_number = st.text_input(
-                "Farm Name and number",
-                value=(existing.get("farm_name_number") or auto_name or ""),
-            )
-            owner_name = st.text_input(
-                "Owner's Name",
-                value=(existing.get("owner_name") or auto_owner or ""),
-            )
-    
-            current_soil = existing.get("soil_type") or "Other / Unknown"
-            soil_type = st.selectbox(
-                "Soil Type",
-                NAMIBIA_SOIL_TYPES,
-                index=max(0, NAMIBIA_SOIL_TYPES.index(current_soil)) if current_soil in NAMIBIA_SOIL_TYPES else len(NAMIBIA_SOIL_TYPES)-1,
-    )
-
-
-    with c2:
-        title_deed_size_ha = st.number_input(
-            "Title Deed size (ha)", min_value=0.0, step=1.0, value=float(existing.get("title_deed_size_ha") or 0.0)
-        )
-        avg_rainfall_mm = st.number_input(
-            "Average rainfall (mm)", min_value=0.0, step=10.0, value=float(existing.get("avg_rainfall_mm") or 0.0)
-        )
-        farm_workers_avg = st.number_input(
-            "Farm Workers (Average)", min_value=0, step=1, value=int(existing.get("farm_workers_avg") or 0)
-        )
-
-    with c3:
-        lat_default = existing.get("latitude")
-        lon_default = existing.get("longitude")
-        latitude = st.number_input(
-            "Latitude",
-            value=float(lat_default if lat_default is not None else (auto_lat if auto_lat is not None else 0.0)),
-            format="%.6f",
-        )
-        longitude = st.number_input(
-            "Longitude",
-            value=float(lon_default if lon_default is not None else (auto_lon if auto_lon is not None else 0.0)),
-            format="%.6f",
-        )
-
-        st.caption("Use Decimal Degrees. Example: -22.560000, 17.083611")
-
-            # --- Shapefile-driven selection ---
+    # ---- load shapefile + picker first ----
     gdf = None
     try:
         gdf = load_farms_gdf(FARMS_SHP_PATH)
     except Exception as e:
         st.warning(f"Farm shapefile not loaded. Check FARMS_SHP_PATH. ({e})")
 
-    selected_feature_id = existing.get("farm_feature_id") if existing else None
+    selected_feature_id = (existing.get("farm_feature_id") or "").strip()
 
     if gdf is not None and not gdf.empty and FARMS_ID_FIELD in gdf.columns:
-        # build label list
         def make_label(row):
             nm = str(row.get(FARMS_NAME_FIELD, "")).strip()
             ow = str(row.get(FARMS_OWNER_FIELD, "")).strip()
             fid = str(row.get(FARMS_ID_FIELD, "")).strip()
             return f"{nm} | {ow} | ID={fid}"
 
+        gdf = gdf.copy()
         gdf["_fid"] = gdf[FARMS_ID_FIELD].astype(str)
         gdf["_label"] = gdf.apply(make_label, axis=1)
 
         labels = gdf["_label"].tolist()
         default_idx = 0
+
         if selected_feature_id:
-            match = gdf.index[gdf["_fid"] == str(selected_feature_id)]
-            if len(match) > 0:
-                default_idx = int(list(match)[0])
+            match_idx = gdf.index[gdf["_fid"] == str(selected_feature_id)].tolist()
+            if match_idx:
+                default_idx = int(match_idx[0])
 
         picked = st.selectbox(
             "Select farm from Namibia farms layer",
@@ -1329,27 +1319,103 @@ def farm_page() -> None:
             index=default_idx,
             key=f"farm_pick_{project_id}",
         )
+
         picked_row = gdf.loc[gdf["_label"] == picked].iloc[0]
         picked_geom = picked_row.geometry
-        picked_centroid = picked_geom.representative_point() if hasattr(picked_geom, "representative_point") else picked_geom.centroid
+        picked_centroid = (
+            picked_geom.representative_point()
+            if hasattr(picked_geom, "representative_point")
+            else picked_geom.centroid
+        )
+
         auto_lat = float(picked_centroid.y)
         auto_lon = float(picked_centroid.x)
-
-        # pre-fill strings
         auto_name = str(picked_row.get(FARMS_NAME_FIELD, "")).strip()
         auto_owner = str(picked_row.get(FARMS_OWNER_FIELD, "")).strip()
         auto_fid = str(picked_row.get(FARMS_ID_FIELD, "")).strip()
 
         st.info("Farm details will auto-fill from the boundary layer. You can still edit fields if needed.")
     else:
-        auto_name, auto_owner, auto_lat, auto_lon, auto_fid, picked_geom = "", "", None, None, "", None
+        st.caption("No farm boundary layer available for auto-fill (or missing ID field).")
 
+    # ---- decide the defaults for inputs (existing > auto > blank) ----
+    default_farm_name = existing.get("farm_name_number") or auto_name or ""
+    default_owner = existing.get("owner_name") or auto_owner or ""
 
-    if st.button("Save farm details", type="primary"):
+    lat_default = existing.get("latitude")
+    lon_default = existing.get("longitude")
+
+    default_lat = float(lat_default) if lat_default is not None else (float(auto_lat) if auto_lat is not None else 0.0)
+    default_lon = float(lon_default) if lon_default is not None else (float(auto_lon) if auto_lon is not None else 0.0)
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        farm_name_number = st.text_input(
+            "Farm Name and number",
+            value=default_farm_name,
+            key=f"farm_name_{project_id}",
+        )
+        owner_name = st.text_input(
+            "Owner's Name",
+            value=default_owner,
+            key=f"farm_owner_{project_id}",
+        )
+
+        current_soil = existing.get("soil_type") or "Other / Unknown"
+        soil_type = st.selectbox(
+            "Soil Type",
+            NAMIBIA_SOIL_TYPES,
+            index=(
+                NAMIBIA_SOIL_TYPES.index(current_soil)
+                if current_soil in NAMIBIA_SOIL_TYPES
+                else len(NAMIBIA_SOIL_TYPES) - 1
+            ),
+            key=f"farm_soil_{project_id}",
+        )
+
+    with c2:
+        title_deed_size_ha = st.number_input(
+            "Title Deed size (ha)",
+            min_value=0.0,
+            step=1.0,
+            value=float(existing.get("title_deed_size_ha") or 0.0),
+            key=f"farm_deed_{project_id}",
+        )
+        avg_rainfall_mm = st.number_input(
+            "Average rainfall (mm)",
+            min_value=0.0,
+            step=10.0,
+            value=float(existing.get("avg_rainfall_mm") or 0.0),
+            key=f"farm_rain_{project_id}",
+        )
+        farm_workers_avg = st.number_input(
+            "Farm Workers (Average)",
+            min_value=0,
+            step=1,
+            value=int(existing.get("farm_workers_avg") or 0),
+            key=f"farm_workers_{project_id}",
+        )
+
+    with c3:
+        latitude = st.number_input(
+            "Latitude",
+            value=default_lat,
+            format="%.6f",
+            key=f"farm_lat_{project_id}",
+        )
+        longitude = st.number_input(
+            "Longitude",
+            value=default_lon,
+            format="%.6f",
+            key=f"farm_lon_{project_id}",
+        )
+        st.caption("Use Decimal Degrees. Example: -22.560000, 17.083611")
+
+    if st.button("Save farm details", type="primary", key=f"save_farm_{project_id}"):
         if not farm_name_number.strip() or not owner_name.strip():
             st.error("Farm Name/number and Owner's Name are required.")
             return
-
 
         farm = {
             "farm_name_number": farm_name_number.strip(),
@@ -1360,12 +1426,16 @@ def farm_page() -> None:
             "farm_workers_avg": int(farm_workers_avg),
             "latitude": float(latitude),
             "longitude": float(longitude),
+            # use selected farm if available, else keep existing stored value
             "farm_feature_id": str(auto_fid or existing.get("farm_feature_id") or ""),
-            "farm_geom_geojson": json.dumps(mapping(picked_geom)) if picked_geom is not None else (existing.get("farm_geom_geojson") or None),
+            "farm_geom_geojson": (
+                json.dumps(mapping(picked_geom)) if picked_geom is not None else (existing.get("farm_geom_geojson") or None)
+            ),
         }
 
         upsert_farm(project_id, farm)
         st.success("Farm registered/updated successfully.")
+
 
 def map_page() -> None:
     st.header("Map (Voyager): Farms + Fieldwork")
@@ -1903,4 +1973,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
