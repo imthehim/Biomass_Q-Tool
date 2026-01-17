@@ -2199,6 +2199,76 @@ def export_page() -> None:
         mime="text/csv",
     )
 
+import time
+import base64
+from pathlib import Path
+import streamlit as st
+
+def _img_to_data_uri(image_path: str) -> str:
+    img_bytes = Path(image_path).read_bytes()
+    b64 = base64.b64encode(img_bytes).decode("utf-8")
+
+    suffix = Path(image_path).suffix.lower()
+    if suffix == ".avif":
+        mime = "image/avif"
+    elif suffix == ".webp":
+        mime = "image/webp"
+    elif suffix in (".jpg", ".jpeg"):
+        mime = "image/jpeg"
+    elif suffix == ".png":
+        mime = "image/png"
+    else:
+        mime = "image/png"
+
+    return f"data:{mime};base64,{b64}"
+
+
+def splash_fullscreen_image(image_path: str, seconds: float = 2.0) -> None:
+    """
+    Full-screen image splash (image only). Shows once per browser session,
+    then reruns into the app.
+    """
+    if st.session_state.get("splash_done"):
+        return
+
+    st.session_state["splash_done"] = True  # prevent loop
+
+    uri = _img_to_data_uri(image_path)
+
+    st.markdown(
+        f"""
+        <style>
+        /* Remove padding so image fills entire viewport */
+        .block-container {{
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+        }}
+
+        /* Hide Streamlit chrome during splash */
+        [data-testid="stSidebar"] {{ display: none !important; }}
+        [data-testid="stHeader"] {{ display: none !important; }}
+        footer {{ display: none !important; }}
+
+        /* Fullscreen background */
+        [data-testid="stAppViewContainer"] {{
+            background: url("{uri}") no-repeat center center fixed;
+            background-size: cover;
+            height: 100vh;
+        }}
+
+        /* Hide main content container */
+        [data-testid="stMainBlockContainer"] {{
+            background: transparent !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    time.sleep(seconds)
+    st.rerun()
+
 
 # -----------------------------
 # Main
@@ -2211,7 +2281,7 @@ def main() -> None:
         st.session_state["user"] = None
 
     # ✅ Splash screen first (only once per session)
-    splash_screen("assets/logo_1.avif", seconds=2)
+    splash_fullscreen_image("assets/logo_1.avif", seconds=2.0)
 
     # DEV: force login (comment out later)
     # if "user" not in st.session_state or not st.session_state["user"]:
@@ -2264,6 +2334,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
 
