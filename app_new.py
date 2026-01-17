@@ -2077,7 +2077,7 @@ def main() -> None:
         return
         
     set_sidebar_background("assets/sidebar_bg.avif", overlay_opacity=0.45)
-    set_main_background("assets/main_bg.avif", overlay_opacity=0.22, fixed=True)
+    set_main_background("assets/image_bg1.webp", overlay_opacity=0.22, fixed=True)
     
     page = sidebar_nav()
 
@@ -2119,6 +2119,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
 
