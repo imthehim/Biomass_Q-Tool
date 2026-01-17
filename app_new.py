@@ -1232,13 +1232,12 @@ def compute_non_slimf_horizons(slimf_series: pd.DataFrame, area_ha: float, susta
 #     st.rerun()
 
 def login_screen() -> None:
-    # Track mode: "login" or "signup"
+    # mode toggle
     if "auth_mode" not in st.session_state:
         st.session_state["auth_mode"] = "login"
-
     mode = st.session_state["auth_mode"]
 
-    # Hide sidebar + tighten page chrome for auth screen
+    # Hide sidebar + make background nice
     st.markdown(
         """
         <style>
@@ -1251,231 +1250,198 @@ def login_screen() -> None:
             background: #f4f7f6;
         }
 
-        /* Centre everything */
-        .auth-wrap {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 30px 16px;
+        /* Centre the auth block */
+        div[data-testid="stVerticalBlock"]:has(.auth-marker) {
+            max-width: 980px;
+            margin: 0 auto;
+            padding-top: 70px;
+            padding-bottom: 70px;
         }
 
-        /* Card */
-        .auth-card {
-            width: min(980px, 96vw);
+        /* The split "card" is the columns horizontal block */
+        div[data-testid="stVerticalBlock"]:has(.auth-marker) div[data-testid="stHorizontalBlock"] {
             background: #ffffff;
             border-radius: 18px;
             box-shadow: 0 18px 50px rgba(0,0,0,0.10);
             overflow: hidden;
-            display: grid;
-            grid-template-columns: 1.2fr 1fr;
         }
 
-        /* Left panel */
-        .auth-left {
+        /* Left column */
+        div[data-testid="stVerticalBlock"]:has(.auth-marker) div[data-testid="column"]:nth-child(1) {
             padding: 42px 52px;
         }
 
-        .brand {
+        /* Right column (teal panel) */
+        div[data-testid="stVerticalBlock"]:has(.auth-marker) div[data-testid="column"]:nth-child(2) {
+            background: linear-gradient(135deg, #2fb3a8 0%, #1e9c93 100%);
+            padding: 42px 44px;
+            color: #ffffff !important;
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-weight: 700;
-            color: #1b1f23;
-            opacity: 0.9;
+            justify-content: center;
+        }
+
+        /* Typography */
+        .brand {
+            display:flex; align-items:center; gap:10px;
+            font-weight: 800;
             margin-bottom: 18px;
+            opacity: 0.92;
         }
         .brand-badge {
             width: 28px; height: 28px;
             border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(52, 180, 170, 0.15);
-            color: #34b4aa;
-            font-weight: 800;
+            display:flex; align-items:center; justify-content:center;
+            background: rgba(47,179,168,0.15);
+            color:#2fb3a8;
+            font-weight: 900;
         }
-
         .auth-title {
             font-size: 34px;
             line-height: 1.15;
-            margin: 12px 0 14px 0;
-            color: #34b4aa;
-            font-weight: 800;
+            margin: 12px 0 12px 0;
+            color: #2fb3a8;
+            font-weight: 900;
         }
-
-        .social-row {
-            display: flex;
-            gap: 10px;
-            margin: 10px 0 14px 0;
-        }
-        .social-dot {
-            width: 36px;
-            height: 36px;
-            border-radius: 999px;
-            border: 1px solid rgba(0,0,0,0.12);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            color: rgba(0,0,0,0.55);
-            background: #fff;
-        }
-
         .muted {
             font-size: 12px;
             color: rgba(0,0,0,0.55);
             margin-bottom: 16px;
         }
 
-        /* Right panel (teal) */
-        .auth-right {
-            background: linear-gradient(135deg, #2fb3a8 0%, #1e9c93 100%);
-            color: #fff;
-            padding: 42px 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .right-inner {
-            text-align: centre;
-            max-width: 320px;
-        }
-        .right-title {
-            font-size: 34px;
+        .social-row { display:flex; gap:10px; margin: 8px 0 14px 0; }
+        .social-dot {
+            width: 36px; height: 36px;
+            border-radius: 999px;
+            border: 1px solid rgba(0,0,0,0.12);
+            display:flex; align-items:center; justify-content:center;
             font-weight: 800;
-            margin-bottom: 12px;
-        }
-        .right-text {
-            font-size: 13px;
-            line-height: 1.6;
-            opacity: 0.92;
-            margin-bottom: 22px;
+            color: rgba(0,0,0,0.55);
+            background: #fff;
         }
 
-        /* Make Streamlit inputs look nicer inside our card */
+        /* Right column text */
+        .right-title { font-size: 34px; font-weight: 900; margin-bottom: 12px; }
+        .right-text  { font-size: 13px; line-height: 1.6; opacity: 0.95; margin-bottom: 22px; text-align: center; }
+
+        /* Inputs + buttons */
         .stTextInput input {
             border-radius: 10px !important;
             padding: 12px 12px !important;
         }
-        .stForm { margin-top: 6px; }
-
-        /* Buttons */
         .stButton button, .stForm button {
             border-radius: 999px !important;
             padding: 10px 18px !important;
-            font-weight: 700 !important;
+            font-weight: 800 !important;
         }
 
-        /* Mobile */
+        /* Mobile: stack */
         @media (max-width: 900px) {
-            .auth-card { grid-template-columns: 1fr; }
-            .auth-right { display: none; }
-            .auth-left { padding: 34px 22px; }
+            div[data-testid="stVerticalBlock"]:has(.auth-marker) div[data-testid="column"]:nth-child(2) {
+                display: none !important;
+            }
+            div[data-testid="stVerticalBlock"]:has(.auth-marker) div[data-testid="column"]:nth-child(1) {
+                padding: 34px 22px;
+            }
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    # Card shell
-    st.markdown('<div class="auth-wrap"><div class="auth-card">', unsafe_allow_html=True)
+    # Marker to target the correct block with CSS
+    st.markdown('<div class="auth-marker"></div>', unsafe_allow_html=True)
 
-    # LEFT PANEL (forms)
-    st.markdown('<div class="auth-left">', unsafe_allow_html=True)
-    st.markdown(
-        """
-        <div class="brand">
-            <div class="brand-badge">BQ</div>
-            <div>Biomass Quantification</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    left, right = st.columns([1.2, 1], gap="large")
 
-    if mode == "login":
-        st.markdown('<div class="auth-title">Sign in</div>', unsafe_allow_html=True)
+    # ---------------- LEFT PANEL ----------------
+    with left:
         st.markdown(
             """
-            <div class="social-row">
-                <div class="social-dot">f</div>
-                <div class="social-dot">G+</div>
-                <div class="social-dot">in</div>
+            <div class="brand">
+                <div class="brand-badge">BQ</div>
+                <div>Biomass Quantification</div>
             </div>
-            <div class="muted">or use your account:</div>
             """,
             unsafe_allow_html=True,
         )
 
-        with st.form("login_form", clear_on_submit=False):
-            username = st.text_input("Email / Username", key="login_username_nice")
-            password = st.text_input("Password", type="password", key="login_password_nice")
-            submitted = st.form_submit_button("SIGN IN", use_container_width=True)
+        if mode == "login":
+            st.markdown('<div class="auth-title">Sign in</div>', unsafe_allow_html=True)
+            st.markdown(
+                """
+                <div class="social-row">
+                    <div class="social-dot">f</div>
+                    <div class="social-dot">G+</div>
+                    <div class="social-dot">in</div>
+                </div>
+                <div class="muted">or use your account:</div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-        # Optional link text (non-functional unless you implement reset)
-        st.caption("Forgot your password? (Not enabled yet)")
+            with st.form("login_form"):
+                username = st.text_input("Email / Username", key="login_username_nice")
+                password = st.text_input("Password", type="password", key="login_password_nice")
+                submitted = st.form_submit_button("SIGN IN", use_container_width=True)
 
-        if submitted:
-            user = authenticate(username, password)
-            if user:
-                st.session_state["user"] = user
-                st.success("Logged in.")
-                st.rerun()
-            else:
-                st.error("Invalid username or password.")
+            st.caption("Forgot your password? (Not enabled yet)")
 
-    else:
-        st.markdown('<div class="auth-title">Create account</div>', unsafe_allow_html=True)
-        st.markdown('<div class="muted">Use your email to register:</div>', unsafe_allow_html=True)
-
-        with st.form("signup_form", clear_on_submit=False):
-            new_username = st.text_input("Email / Username", key="signup_username_nice")
-            new_password = st.text_input("Password", type="password", key="signup_password_nice")
-            new_password2 = st.text_input("Confirm password", type="password", key="signup_password2_nice")
-            submitted = st.form_submit_button("SIGN UP", use_container_width=True)
-
-        if submitted:
-            if not new_username.strip():
-                st.error("Username is required.")
-            elif not new_password:
-                st.error("Password is required.")
-            elif new_password != new_password2:
-                st.error("Passwords do not match.")
-            else:
-                ok, msg = create_user(new_username, new_password)
-                (st.success if ok else st.error)(msg)
-                if ok:
-                    st.session_state["auth_mode"] = "login"
+            if submitted:
+                user = authenticate(username, password)
+                if user:
+                    st.session_state["user"] = user
+                    st.success("Logged in.")
                     st.rerun()
+                else:
+                    st.error("Invalid username or password.")
 
-    st.markdown("</div>", unsafe_allow_html=True)  # close auth-left
+        else:
+            st.markdown('<div class="auth-title">Create account</div>', unsafe_allow_html=True)
+            st.markdown('<div class="muted">Use your email to register:</div>', unsafe_allow_html=True)
 
-    # RIGHT PANEL (teaser + toggle)
-    st.markdown('<div class="auth-right"><div class="right-inner">', unsafe_allow_html=True)
+            with st.form("signup_form"):
+                new_username = st.text_input("Email / Username", key="signup_username_nice")
+                new_password = st.text_input("Password", type="password", key="signup_password_nice")
+                new_password2 = st.text_input("Confirm password", type="password", key="signup_password2_nice")
+                submitted = st.form_submit_button("SIGN UP", use_container_width=True)
 
-    if mode == "login":
-        st.markdown('<div class="right-title">Hello, Friend!</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="right-text">Enter your personal details and start your journey with us.</div>',
-            unsafe_allow_html=True,
-        )
-        if st.button("SIGN UP", key="go_signup", use_container_width=True):
-            st.session_state["auth_mode"] = "signup"
-            st.rerun()
-    else:
-        st.markdown('<div class="right-title">Welcome Back!</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="right-text">To keep connected with us please login with your personal info.</div>',
-            unsafe_allow_html=True,
-        )
-        if st.button("SIGN IN", key="go_login", use_container_width=True):
-            st.session_state["auth_mode"] = "login"
-            st.rerun()
+            if submitted:
+                if not new_username.strip():
+                    st.error("Username is required.")
+                elif not new_password:
+                    st.error("Password is required.")
+                elif new_password != new_password2:
+                    st.error("Passwords do not match.")
+                else:
+                    ok, msg = create_user(new_username, new_password)
+                    (st.success if ok else st.error)(msg)
+                    if ok:
+                        st.session_state["auth_mode"] = "login"
+                        st.rerun()
 
-    st.markdown("</div></div>", unsafe_allow_html=True)  # close right-inner + auth-right
+    # ---------------- RIGHT PANEL ----------------
+    with right:
+        # Use HTML to keep text white and centred
+        if mode == "login":
+            st.markdown('<div class="right-title">Hello, Friend!</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="right-text">Enter your personal details<br>and start your journey with us.</div>',
+                unsafe_allow_html=True,
+            )
+            if st.button("SIGN UP", key="go_signup", use_container_width=True):
+                st.session_state["auth_mode"] = "signup"
+                st.rerun()
+        else:
+            st.markdown('<div class="right-title">Welcome Back!</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="right-text">To keep connected with us<br>please login with your personal info.</div>',
+                unsafe_allow_html=True,
+            )
+            if st.button("SIGN IN", key="go_login", use_container_width=True):
+                st.session_state["auth_mode"] = "login"
+                st.rerun()
 
-    # Close card
-    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def render_assumptions_editor_page(a: dict, project_id: int) -> dict:
@@ -2548,6 +2514,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
 
