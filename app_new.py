@@ -31,6 +31,80 @@ import streamlit as st
 import base64
 from pathlib import Path
 
+import time
+import base64
+from pathlib import Path
+import streamlit as st
+
+def _img_to_data_uri(image_path: str) -> str:
+    img_bytes = Path(image_path).read_bytes()
+    b64 = base64.b64encode(img_bytes).decode("utf-8")
+
+    suffix = Path(image_path).suffix.lower()
+    if suffix == ".avif":
+        mime = "image/avif"
+    elif suffix == ".webp":
+        mime = "image/webp"
+    elif suffix in (".jpg", ".jpeg"):
+        mime = "image/jpeg"
+    elif suffix == ".png":
+        mime = "image/png"
+    else:
+        mime = "image/png"
+
+    return f"data:{mime};base64,{b64}"
+
+
+def splash_fullscreen_image(image_path: str, seconds: float = 2.0) -> None:
+    """
+    Full-screen image splash (image only). Shows once per browser session,
+    then reruns into the app.
+    """
+    if st.session_state.get("splash_done"):
+        return
+
+    # mark immediately to prevent loops
+    st.session_state["splash_done"] = True
+
+    uri = _img_to_data_uri(image_path)
+
+    st.markdown(
+        f"""
+        <style>
+        /* Remove whitespace/padding so the image truly fills the viewport */
+        .block-container {{
+            padding-top: 0rem !important;
+            padding-bottom: 0rem !important;
+            padding-left: 0rem !important;
+            padding-right: 0rem !important;
+            max-width: 100% !important;
+        }}
+
+        /* Hide Streamlit chrome for the splash moment */
+        [data-testid="stSidebar"] {{ display: none !important; }}
+        [data-testid="stHeader"] {{ display: none !important; }}
+        footer {{ display: none !important; }}
+
+        /* Full-screen background image */
+        [data-testid="stAppViewContainer"] {{
+            background: url("{uri}") no-repeat center center fixed;
+            background-size: cover;
+            height: 100vh;
+        }}
+
+        /* Hide any accidental content */
+        [data-testid="stMainBlockContainer"] {{
+            background: transparent !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Absolutely no UI elements (no text, no image widget) — just the background.
+    time.
+
+
 def set_sidebar_background(image_path: str, overlay_opacity: float = 0.45) -> None:
     """
     Sets a background image for the Streamlit sidebar using CSS + base64 embedding.
@@ -1093,68 +1167,68 @@ def compute_non_slimf_horizons(slimf_series: pd.DataFrame, area_ha: float, susta
 # UI Components
 # -----------------------------
 
-def splash_screen(logo_path: str = "assets/logo.png", seconds: float = 1.8) -> None:
-    """
-    Shows a one-time splash screen (per browser session) with a centred logo,
-    then reruns into the app.
-    """
-    # If already shown in this session, do nothing
-    if st.session_state.get("splash_done"):
-        return
+# def splash_screen(logo_path: str = "assets/logo.png", seconds: float = 1.8) -> None:
+#     """
+#     Shows a one-time splash screen (per browser session) with a centred logo,
+#     then reruns into the app.
+#     """
+#     # If already shown in this session, do nothing
+#     if st.session_state.get("splash_done"):
+#         return
 
-    st.session_state["splash_done"] = True  # mark immediately (prevents loops)
+#     st.session_state["splash_done"] = True  # mark immediately (prevents loops)
 
-    # Basic full-page centred layout
-    st.markdown(
-        """
-        <style>
-        .splash-wrap {
-            height: 70vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 14px;
-        }
-        .splash-title {
-            font-size: 22px;
-            font-weight: 700;
-            opacity: 0.9;
-        }
-        .splash-sub {
-            font-size: 13px;
-            opacity: 0.7;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+#     # Basic full-page centred layout
+#     st.markdown(
+#         """
+#         <style>
+#         .splash-wrap {
+#             height: 70vh;
+#             display: flex;
+#             flex-direction: column;
+#             justify-content: center;
+#             align-items: center;
+#             gap: 14px;
+#         }
+#         .splash-title {
+#             font-size: 22px;
+#             font-weight: 700;
+#             opacity: 0.9;
+#         }
+#         .splash-sub {
+#             font-size: 13px;
+#             opacity: 0.7;
+#         }
+#         </style>
+#         """,
+#         unsafe_allow_html=True,
+#     )
 
-    ph = st.empty()
+#     ph = st.empty()
 
-    with ph.container():
-        st.markdown('<div class="splash-wrap">', unsafe_allow_html=True)
+#     with ph.container():
+#         st.markdown('<div class="splash-wrap">', unsafe_allow_html=True)
 
-        if Path(logo_path).exists():
-            st.image(logo_path, width=220)
-        else:
-            st.markdown("### Biomass Quantification App")
+#         if Path(logo_path).exists():
+#             st.image(logo_path, width=220)
+#         else:
+#             st.markdown("### Biomass Quantification App")
 
-        st.markdown('<div class="splash-title">Biomass Quantification Tool</div>', unsafe_allow_html=True)
-        st.markdown('<div class="splash-sub">Loading…</div>', unsafe_allow_html=True)
-        st.progress(0)
+#         st.markdown('<div class="splash-title">Biomass Quantification Tool</div>', unsafe_allow_html=True)
+#         st.markdown('<div class="splash-sub">Loading…</div>', unsafe_allow_html=True)
+#         st.progress(0)
 
-        st.markdown("</div>", unsafe_allow_html=True)
+#         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Animate a simple progress bar (optional but nice)
-    prog = st.progress(0)
-    steps = 30
-    for i in range(steps):
-        prog.progress(int((i + 1) * (100 / steps)))
-        time.sleep(seconds / steps)
+#     # Animate a simple progress bar (optional but nice)
+#     prog = st.progress(0)
+#     steps = 30
+#     for i in range(steps):
+#         prog.progress(int((i + 1) * (100 / steps)))
+#         time.sleep(seconds / steps)
 
-    ph.empty()
-    st.rerun()
+#     ph.empty()
+#     st.rerun()
 
 def login_screen() -> None:
     st.title("Biomass Quantification App") #🌿
@@ -2136,7 +2210,7 @@ def main() -> None:
         st.session_state["user"] = None
 
     # ✅ Splash screen first (only once per session)
-    splash_screen("assets/logo_1.avif", seconds=1.8)
+    splash_screen("assets/logo_1.avif", seconds=2)
 
     # DEV: force login (comment out later)
     # if "user" not in st.session_state or not st.session_state["user"]:
@@ -2189,6 +2263,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
 
