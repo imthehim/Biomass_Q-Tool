@@ -2136,7 +2136,7 @@ def main() -> None:
         st.session_state["user"] = None
 
     # ✅ Splash screen first (only once per session)
-    splash_screen("assets/logo.png", seconds=1.8)
+    splash_screen("assets/logo_1.avif", seconds=1.8)
 
     # DEV: force login (comment out later)
     # if "user" not in st.session_state or not st.session_state["user"]:
@@ -2189,6 +2189,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
 
