@@ -24,6 +24,9 @@ from streamlit_folium import st_folium
 import pandas as pd
 import streamlit as st
 
+import time
+from pathlib import Path
+import streamlit as st
 
 import base64
 from pathlib import Path
@@ -1089,6 +1092,70 @@ def compute_non_slimf_horizons(slimf_series: pd.DataFrame, area_ha: float, susta
 # -----------------------------
 # UI Components
 # -----------------------------
+
+def splash_screen(logo_path: str = "assets/logo.png", seconds: float = 1.8) -> None:
+    """
+    Shows a one-time splash screen (per browser session) with a centred logo,
+    then reruns into the app.
+    """
+    # If already shown in this session, do nothing
+    if st.session_state.get("splash_done"):
+        return
+
+    st.session_state["splash_done"] = True  # mark immediately (prevents loops)
+
+    # Basic full-page centred layout
+    st.markdown(
+        """
+        <style>
+        .splash-wrap {
+            height: 70vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 14px;
+        }
+        .splash-title {
+            font-size: 22px;
+            font-weight: 700;
+            opacity: 0.9;
+        }
+        .splash-sub {
+            font-size: 13px;
+            opacity: 0.7;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    ph = st.empty()
+
+    with ph.container():
+        st.markdown('<div class="splash-wrap">', unsafe_allow_html=True)
+
+        if Path(logo_path).exists():
+            st.image(logo_path, width=220)
+        else:
+            st.markdown("### Biomass Quantification App")
+
+        st.markdown('<div class="splash-title">Biomass Quantification Tool</div>', unsafe_allow_html=True)
+        st.markdown('<div class="splash-sub">Loading…</div>', unsafe_allow_html=True)
+        st.progress(0)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Animate a simple progress bar (optional but nice)
+    prog = st.progress(0)
+    steps = 30
+    for i in range(steps):
+        prog.progress(int((i + 1) * (100 / steps)))
+        time.sleep(seconds / steps)
+
+    ph.empty()
+    st.rerun()
+
 def login_screen() -> None:
     st.title("Biomass Quantification App") #🌿
     st.caption("Login to manage projects, farms, fieldwork, and biomass results (SLIMF / NON-SLIMF).")
@@ -2067,7 +2134,10 @@ def main() -> None:
 
     if "user" not in st.session_state:
         st.session_state["user"] = None
-        
+
+    # ✅ Splash screen first (only once per session)
+    splash_screen("assets/logo.png", seconds=1.8)
+
     # DEV: force login (comment out later)
     # if "user" not in st.session_state or not st.session_state["user"]:
     #     st.session_state["user"] = {"id": 1, "username": "dev"}
@@ -2119,6 +2189,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
 
