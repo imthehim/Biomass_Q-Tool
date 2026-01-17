@@ -81,6 +81,95 @@ def set_sidebar_background(image_path: str, overlay_opacity: float = 0.45) -> No
         unsafe_allow_html=True,
     )
 
+import base64
+from pathlib import Path
+
+def _img_to_data_uri(image_path: str) -> str:
+    img_bytes = Path(image_path).read_bytes()
+    b64 = base64.b64encode(img_bytes).decode("utf-8")
+
+    suffix = Path(image_path).suffix.lower()
+    if suffix == ".avif":
+        mime = "image/avif"
+    elif suffix == ".webp":
+        mime = "image/webp"
+    elif suffix in (".jpg", ".jpeg"):
+        mime = "image/jpeg"
+    elif suffix == ".png":
+        mime = "image/png"
+    else:
+        mime = "image/png"
+
+    return f"data:{mime};base64,{b64}"
+
+
+def set_sidebar_background(image_path: str, overlay_opacity: float = 0.45) -> None:
+    uri = _img_to_data_uri(image_path)
+    st.markdown(
+        f"""
+        <style>
+        [data-testid="stSidebar"] {{
+            background-image:
+              linear-gradient(rgba(0,0,0,{overlay_opacity}), rgba(0,0,0,{overlay_opacity})),
+              url("{uri}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def set_main_background(image_path: str, overlay_opacity: float = 0.25, fixed: bool = True) -> None:
+    """
+    Styles the main content area (right of the sidebar).
+    overlay_opacity: 0..1 (higher = darker overlay for readability)
+    fixed=True gives a nice parallax-style 'fixed' background.
+    """
+    uri = _img_to_data_uri(image_path)
+    attachment = "fixed" if fixed else "scroll"
+
+    st.markdown(
+        f"""
+        <style>
+        /* Main screen background */
+        [data-testid="stAppViewContainer"] {{
+            background-image:
+              linear-gradient(rgba(255,255,255,{overlay_opacity}), rgba(255,255,255,{overlay_opacity})),
+              url("{uri}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: {attachment};
+        }}
+
+        /* Make the top header transparent so the background shows */
+        [data-testid="stHeader"] {{
+            background: rgba(0,0,0,0);
+        }}
+
+        /* Optional: soften content blocks for readability */
+        .stMarkdown, .stDataFrame, .stTable, .stMetric, .stAlert {{
+            background: rgba(255,255,255,0.0);
+        }}
+
+        /* Optional: give common widgets a subtle glass card look */
+        div[data-testid="stVerticalBlock"] > div:has(> .stDataFrame),
+        div[data-testid="stVerticalBlock"] > div:has(> .stTable),
+        div[data-testid="stVerticalBlock"] > div:has(> .stMetric),
+        div[data-testid="stVerticalBlock"] > div:has(> .stAlert) {{
+            background: rgba(255,255,255,0.72);
+            border-radius: 14px;
+            padding: 12px;
+            backdrop-filter: blur(6px);
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 # -----------------------------
 # App configuration
@@ -1694,7 +1783,7 @@ def fieldwork_page() -> None:
     edited = st.data_editor(
         df[editable_cols],
         use_container_width=True,
-        num_rows="fixed",
+        num_rows="fixed", 
         key=f"editor_{phase}",
     )
 
@@ -1991,6 +2080,7 @@ def main() -> None:
         return
         
     set_sidebar_background("assets/sidebar_bg.avif", overlay_opacity=0.45)
+    set_main_background("assets/main_bg.jpg", overlay_opacity=0.22, fixed=True)
     
     page = sidebar_nav()
 
@@ -2032,6 +2122,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
 
