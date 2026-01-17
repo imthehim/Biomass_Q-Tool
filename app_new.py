@@ -25,6 +25,63 @@ import pandas as pd
 import streamlit as st
 
 
+import base64
+from pathlib import Path
+
+def set_sidebar_background(image_path: str, overlay_opacity: float = 0.45) -> None:
+    """
+    Sets a background image for the Streamlit sidebar using CSS + base64 embedding.
+    overlay_opacity: 0..1, higher = darker overlay for readability.
+    """
+    img_bytes = Path(image_path).read_bytes()
+    b64 = base64.b64encode(img_bytes).decode("utf-8")
+
+    # Mime type (mimetypes often doesn't know avif reliably)
+    suffix = Path(image_path).suffix.lower()
+    if suffix == ".avif":
+        mime = "image/avif"
+    elif suffix == ".webp":
+        mime = "image/webp"
+    elif suffix in (".jpg", ".jpeg"):
+        mime = "image/jpeg"
+    elif suffix == ".png":
+        mime = "image/png"
+    else:
+        mime = "image/png"  # safe fallback
+
+    st.markdown(
+        f"""
+        <style>
+        /* Sidebar background image */
+        [data-testid="stSidebar"] {{
+            background-image:
+              linear-gradient(rgba(0,0,0,{overlay_opacity}), rgba(0,0,0,{overlay_opacity})),
+              url("data:{mime};base64,{b64}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }}
+
+        /* Optional: make sidebar content sit nicely on top */
+        [data-testid="stSidebar"] * {{
+            color: white !important;
+        }}
+
+        /* Optional: soften containers inside sidebar */
+        [data-testid="stSidebar"] .stButton button,
+        [data-testid="stSidebar"] .stTextInput input,
+        [data-testid="stSidebar"] .stSelectbox div,
+        [data-testid="stSidebar"] .stCheckbox,
+        [data-testid="stSidebar"] .stRadio {{
+            background: rgba(255,255,255,0.08) !important;
+            border-radius: 10px !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 # -----------------------------
 # App configuration
 # -----------------------------
@@ -1932,7 +1989,9 @@ def main() -> None:
     if not st.session_state["user"]:
         login_screen()
         return
-
+        
+    set_sidebar_background("assets/sidebar_bg.avif", overlay_opacity=0.45)
+    
     page = sidebar_nav()
 
     if page == "Logout":
@@ -1973,5 +2032,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
