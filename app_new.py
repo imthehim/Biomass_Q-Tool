@@ -102,7 +102,8 @@ def splash_fullscreen_image(image_path: str, seconds: float = 2.0) -> None:
     )
 
     # Absolutely no UI elements (no text, no image widget) — just the background.
-    time.
+    time.sleep(seconds)
+    st.rerun()
 
 
 def set_sidebar_background(image_path: str, overlay_opacity: float = 0.45) -> None:
@@ -2263,6 +2264,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
 
