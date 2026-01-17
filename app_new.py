@@ -81,9 +81,6 @@ def set_sidebar_background(image_path: str, overlay_opacity: float = 0.45) -> No
         unsafe_allow_html=True,
     )
 
-import base64
-from pathlib import Path
-
 def _img_to_data_uri(image_path: str) -> str:
     img_bytes = Path(image_path).read_bytes()
     b64 = base64.b64encode(img_bytes).decode("utf-8")
@@ -2080,7 +2077,7 @@ def main() -> None:
         return
         
     set_sidebar_background("assets/sidebar_bg.avif", overlay_opacity=0.45)
-    set_main_background("assets/main_bg.jpg", overlay_opacity=0.22, fixed=True)
+    set_main_background("assets/main_bg.avif", overlay_opacity=0.22, fixed=True)
     
     page = sidebar_nav()
 
@@ -2122,6 +2119,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
 
